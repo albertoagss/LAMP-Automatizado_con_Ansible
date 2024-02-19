@@ -1,0 +1,3 @@
+Para cambiar el backup que se quiere restaurar, 
+se debe cambiar el nombre del backup en las líneas
+42 y 49 del archivo main.yml de la carpeta mariadb/tasks

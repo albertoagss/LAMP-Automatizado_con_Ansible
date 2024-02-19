@@ -1,0 +1,39 @@
+---
+- name: Copia de seguridad de la base de datos MariaDB
+  hosts: 192.168.10.62
+  become: yes
+
+  vars:
+          backup_dir: /home
+          database_name: bdwordpress
+          backup_file: "{{ backup_dir }}/backup_{{ database_name }}_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}.sql"
+
+  tasks:
+          - name: Crear directorio de copia de seguridad
+            file:
+                    path: "{{ backup_dir }}"
+                    state: directory
+                    mode: '0755'
+
+          - name: Crear copia de seguridad
+            mysql_db:
+                    name: "{{ database_name }}"
+                    state: dump
+                    target: "{{ backup_file }}"
+
+          - name: Verificar si el backup se realizó correctamente
+            command: "ls {{ backup_file }}"
+            register: backup_check
+            failed_when: backup_check.rc != 0
+            
+          - name: Mostrar mensaje de éxito
+            debug:
+                    msg: "Backup realizada con éxito en {{ backup_file }}"
+            when: backup_check.rc == 0
+                  
+          - name: Copiar backup al nodo de control
+            fetch:
+                    src: "{{ backup_file }}"
+                    dest: "/etc/ansible/recursos/backups/"
+                    flat: yes
+            

@@ -1,0 +1,119 @@
+---
+- name: Actualizar caché de los repositorios
+  yum:
+          name: '*'
+          state: latest
+          update_cache: true
+
+- name: Instalar MariaDB
+  yum:
+          name:
+                  - mariadb-server
+#                  - python2
+                  - python3
+                  - python3-PyMySQL
+#                  - python3-mysql
+#                  - python2-PyMySQL
+          state: latest
+
+- name: Iniciar MariaDB
+  service:
+          name: mariadb
+          enabled: true
+          state: started
+
+#--------------- ENVIAR ARCHIVO .my.cnf ------------------
+
+#- name: Crear archivo .my.cnf
+#  copy:
+#          src: /etc/ansible/recursos/.my.cnf
+#          dest: /root/
+#          owner: root
+#          group: root
+#          mode: '0755'
+#  tags: mariadb
+
+#---------------- REINICIAR MARIADB ----------------------
+
+- name: Reiniciar MariaDB
+  service:
+          name: mariadb
+          state: restarted
+  tags: mariadb
+
+#---------------- CAMBIAR CONTRASEÑA USUARIO ROOT DE MARIADB -------
+
+- name: Ejecutar mysql_secure_installation
+  shell: |
+          echo -e "\nn\nY\n12345\n12345\nY\nn\nY\nY\n" | sudo mysql_secure_installation
+  args:
+   executable: /bin/bash
+  tags: mariadb
+
+#---------------- CREAR BASE DE DATOS ---------------------
+
+- name: Crear base de datos para WordPress
+  mysql_db:
+          name: bdwordpress
+          login_user: root
+          login_password: 12345
+          state: present
+  tags: mariadb
+
+#---------------- CREAR USUARIO DE LA BD -------------------
+
+- name: Crear usuario para la base de datos
+  mysql_user:
+          login_user: root
+          login_password: 12345
+          name: wpuser
+          password: 1234
+          priv: 'bdwordpress.*:ALL,GRANT'
+          host: '%'
+          state: present
+  tags: mariadb
+
+#----------------- COPIAR BACKUP -----------------------------
+
+#- name: Copiar backup al servidor MariaDB
+#  copy:
+#          src: /etc/ansible/recursos/backups/backup_bdwordpress_2023-05-22_09:04:20.sql
+#          dest: /home/
+#  tags: mariadb
+
+#---------------- RESTAURAR BACKUP ---------------------------
+
+#- name: Restaurar backup de la base de datos
+#  mysql_db:
+#          name: bdwordpress
+#          state: import
+#          target: /home/backup_bdwordpress_2023-05-22_09:04:20.sql
+#          login_user: wpuser
+#          login_password: 1234
+#  tags: mariadb
+
+#----------------- HABILILITAR MYSQL EN FIREWALLD ------------------
+
+- name: Habilitar el servicio mysql en firewalld
+  firewalld:
+          service: mysql
+          permanent: true
+          state: enabled
+  tags: mariadb
+
+#------------------ ABRIR PUERTO 3306 EN FIREWALLD -----------------
+
+- name: Abrir el puerto 3306 en firewalld
+  firewalld:
+          port: 3306/tcp
+          permanent: true
+          state: enabled
+  tags: mariadb
+
+#------------------ RECARGAR FIREWALL -------------------------------
+
+- name: Recargar la configuración del firewall
+  systemd:
+          name: firewalld
+          state: restarted
+  tags: mariadb

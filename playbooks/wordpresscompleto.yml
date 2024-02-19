@@ -1,0 +1,15 @@
+---
+- name: Proxy inverso con apache
+  hosts: 192.168.10.60
+  roles:
+          - apacheproxyinverso
+
+- name: Servidor con apache y wordpress
+  hosts: 192.168.10.61
+  roles:
+          - apacheywordpress
+
+- name: Servidor con MariaDB
+  hosts: 192.168.10.62
+  roles:
+          - mariadb
